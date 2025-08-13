@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmojiMeals - ระบบสั่งอาหาร</title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Scrollbar สำหรับมือถือ */
+    ::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: rgba(156, 163, 175, 0.5);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-orange-50 to-white min-h-screen font-sans">
+
+<div id="app" class="flex flex-col items-center justify-start py-6 px-4">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden ring-1 ring-gray-100">
+
+    <!-- Header -->
+    <header class="p-4 bg-gradient-to-r from-orange-400 to-amber-400 text-white">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-lg font-bold">ร้านอาหาร EmojiMeals</h1>
+          <p class="text-xs opacity-90">สั่งง่าย — รับเร็ว ✨</p>
+        </div>
+        <div class="text-2xl">🍽️</div>
+      </div>
+      <!-- Search -->
+      <div class="mt-3">
+        <input id="searchInput" type="text" placeholder="ค้นหาเมนู เช่น 'ราเมน' หรือ 'ชา'..." class="placeholder:italic placeholder:text-slate-400 block bg-white w-full border border-transparent py-2 pl-10 pr-3 rounded-full text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-300" />
+      </div>
+    </header>
+
+    <!-- Categories -->
+    <div id="categories" class="p-4 flex gap-3 overflow-x-auto pb-1"></div>
+
+    <!-- Menu list -->
+    <div id="menuList" class="p-4 space-y-3 max-h-[52vh] overflow-y-auto"></div>
+
+    <!-- Floating Cart -->
+    <div id="cartBar" class="p-4 fixed left-1/2 transform -translate-x-1/2 bottom-6 w-[92%] max-w-md bg-white border border-gray-100 rounded-2xl shadow-lg flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-lg bg-amber-50 flex items-center justify-center">🧺</div>
+        <div>
+          <div id="cartCount" class="text-sm font-medium">0 รายการ</div>
+          <div id="cartSubtotal" class="text-xs text-gray-500">รวม 0 ฿ · ค่าส่ง 0 ฿</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="viewCartBtn" class="px-4 py-2 rounded-xl border border-amber-200 text-amber-700 text-sm">ดูตะกร้า</button>
+        <button id="checkoutBtn" class="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm shadow">ชำระ</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Cart Modal -->
+<div id="cartModal" class="fixed inset-0 bg-black/40 flex items-end z-40 hidden">
+  <div class="w-full max-w-md bg-white rounded-t-2xl p-4 shadow-xl" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-lg font-bold">ตะกร้าของฉัน</h3>
+      <button onclick="closeCart()" class="text-gray-500">ปิด</button>
+    </div>
+    <div id="cartItems" class="space-y-3 max-h-60 overflow-y-auto"></div>
+    <div class="mt-4 flex items-center justify-between">
+      <div>
+        <div class="text-xs text-gray-500">รวม</div>
+        <div id="cartTotal" class="font-bold">0 ฿ (+0 ฿ ค่าส่ง)</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="closeCart()" class="px-4 py-2 rounded-lg border">กลับ</button>
+        <button onclick="openCheckout()" class="px-4 py-2 rounded-lg bg-amber-500 text-white">ไปชำระ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Checkout Modal -->
+<div id="checkoutModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+  <div class="w-[92%] max-w-md bg-white rounded-2xl p-5" onclick="event.stopPropagation()">
+    <h3 class="text-lg font-bold mb-2">สรุปคำสั่งซื้อ</h3>
+    <div id="checkoutItems" class="space-y-2 max-h-40 overflow-y-auto mb-3"></div>
+    <div class="mb-3">
+      <div class="text-sm text-gray-500">วิธีการชำระ</div>
+      <div class="mt-2 flex gap-2 flex-wrap">
+        <label class="px-3 py-2 rounded-lg border"><input type="radio" name="payment" value="cash" checked> เงินสด</label>
+        <label class="px-3 py-2 rounded-lg border"><input type="radio" name="payment" value="bank"> โอน/บัญชีธนาคาร</label>
+        <label class="px-3 py-2 rounded-lg border"><input type="radio" name="payment" value="promptpay"> QR PromptPay</label>
+      </div>
+    </div>
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-xs text-gray-500">ยอดชำระทั้งหมด</div>
+        <div id="checkoutTotal" class="font-bold text-lg">0 ฿</div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="closeCheckout()" class="px-4 py-2 rounded-lg border">ยกเลิก</button>
+        <button onclick="confirmOrder()" class="px-4 py-2 rounded-lg bg-amber-500 text-white">ยืนยันสั่งซื้อ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATEGORIES = ["All","ข้าว/ราเมน","ของทานเล่น","เครื่องดื่ม","ของหวาน","พิเศษ"];
+const MENU = [
+  {id:"m1",category:"ข้าว/ราเมน",emoji:"🍜",name:"ราเมนหมูชาชู",desc:"น้ำซุปเข้มข้น เส้นสด",price:95},
+  {id:"m2",category:"ข้าว/ราเมน",emoji:"🍛",name:"ข้าวหน้าแกงกะหรี่",desc:"หอมเครื่องแกง โรยด้วยหอมเจียว",price:110},
+  {id:"m3",category:"ของทานเล่น",emoji:"🍟",name:"เฟรนช์ฟราย",desc:"กรอบนอก นุ่มใน",price:55},
+  {id:"m4",category:"เครื่องดื่ม",emoji:"🧋",name:"ชานมไข่มุก",desc:"ไข่มุกหนึบ เสิร์ฟเย็น",price:65},
+  {id:"m5",category:"ของหวาน",emoji:"🍰",name:"เค้กช็อกโกแลต",desc:"ช็อกเนื้อนุ่ม ไม่หวานเกินไป",price:80},
+  {id:"m6",category:"พิเศษ",emoji:"🍣",name:"ซูชิรวม",desc:"สดใหม่หลากหลายหน้า",price:160},
+  {id:"m7",category:"ของทานเล่น",emoji:"🌮",name:"ทาโกะยากิ",desc:"ซอสเข้มข้น โรยปลาแห้ง",price:70},
+  {id:"m8",category:"เครื่องดื่ม",emoji:"☕",name:"กาแฟเย็น",desc:"หอมกลมกล่อม",price:50}
+];
+
+let selectedCategory = "All";
+let cart = [];
+
+const categoriesDiv = document.getElementById('categories');
+const menuListDiv = document.getElementById('menuList');
+const searchInput = document.getElementById('searchInput');
+const cartCountDiv = document.getElementById('cartCount');
+const cartSubtotalDiv = document.getElementById('cartSubtotal');
+const cartTotalDiv = document.getElementById('cartTotal');
+const checkoutTotalDiv = document.getElementById('checkoutTotal');
+const checkoutItemsDiv = document.getElementById('checkoutItems');
+const cartItemsDiv = document.getElementById('cartItems');
+const cartModal = document.getElementById('cartModal');
+const checkoutModal = document.getElementById('checkoutModal');
+
+function renderCategories(){
+  categoriesDiv.innerHTML='';
+  CATEGORIES.forEach(cat=>{
+    const btn = document.createElement('button');
+    btn.textContent=cat;
+    btn.className=`flex-shrink-0 px-3 py-2 rounded-xl text-sm font-medium shadow-sm ${selectedCategory===cat?'bg-amber-500 text-white':'bg-amber-50 text-amber-700'}`;
+    btn.onclick=()=>{ selectedCategory=cat; renderMenu(); renderCategories(); };
+    categoriesDiv.appendChild(btn);
+  });
+}
+
+function renderMenu(){
+  const query = searchInput.value.trim().toLowerCase();
+  const items = MENU.filter(m=> (selectedCategory==='All'||m.category===selectedCategory) && (m.name.toLowerCase().includes(query) || m.desc.toLowerCase().includes(query) || m.emoji.includes(query)) );
+  menuListDiv.innerHTML='';
+  if(items.length===0){ menuListDiv.innerHTML='<div class="text-center text-sm text-gray-400 py-8">ไม่พบเมนูที่ตรงกับการค้นหา</div>'; return; }
+  items.forEach(item=>{
+    const div=document.createElement('div');
+    div.className='flex items-center justify-between p-3 rounded-xl border border-gray-100 shadow-sm';
+    div.innerHTML=`<div class="flex items-center gap-3"><div class="w-12 h-12 rounded-lg bg-amber-50 flex items-center justify-center text-2xl">${item.emoji}</div><div><div class="font-semibold">${item.name}</div><div class="text-xs text-gray-500">${item.desc}</div></div></div><div class="flex flex-col items-end"><div class="font-semibold">${item.price} ฿</div><button class="mt-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-sm">เพิ่ม</button></div>`;
+    div.querySelector('button').onclick=()=>{ addToCart(item.id); };
+    menuListDiv.appendChild(div);
+  });
+}
+
+function addToCart(id){
+  const found = cart.find(c=>c.id===id);
+  if(found){ found.qty+=1; } else { cart.push({id, qty:1, note:''}); }
+  updateCartUI();
+}
+
+function updateCartUI(){
+  const subtotal = cart.reduce((s,c)=> s+MENU.find(m=>m.id===c.id).price*c.qty,0);
+  const shipping=subtotal>0?20:0;
+  const total=subtotal+shipping;
+  cartCountDiv.textContent=`${cart.length} รายการ`;
+  cartSubtotalDiv.textContent=`รวม ${subtotal} ฿ · ค่าส่ง ${shipping} ฿`;
+  cartTotalDiv.textContent=`${total} ฿`;
+  checkoutTotalDiv.textContent=`${total} ฿`;
+
+  cartItemsDiv.innerHTML='';
+  checkoutItemsDiv.innerHTML='';
+  cart.forEach(c=>{
+    const m=MENU.find(m=>m.id===c.id);
+    const div=document.createElement('div');
+    div.className='flex items-center justify-between';
+    div.innerHTML=`<div class="flex items-center gap-2"><div class="text-2xl">${m.emoji}</div><div>${m.name}</div></div><div>${c.qty} × ${m.price} ฿</div>`;
+    cartItemsDiv.appendChild(div);
+
+    const cdiv=document.createElement('div');
+    cdiv.className='flex items-center justify-between';
+    cdiv.innerHTML=`<div class="flex items-center gap-2"><div class="text-2xl">${m.emoji}</div><div>${m.name}</div></div><div>${c.qty} × ${m.price} ฿</div>`;
+    checkoutItemsDiv.appendChild(cdiv);
+  });
+}
+
+function closeCart(){ cartModal.classList.add('hidden'); }
+function openCart(){ cartModal.classList.remove('hidden'); }
+function closeCheckout(){ checkoutModal.classList.add('hidden'); }
+function openCheckout(){ if(cart.length===0){ alert('ตะกร้าว่าง'); return; } checkoutModal.classList.remove('hidden'); renderMenu(); updateCartUI(); }
+function confirmOrder(){ alert('สั่งซื้อสำเร็จ!'); cart=[]; updateCartUI(); closeCheckout(); closeCart(); }
+
+searchInput.addEventListener('input',renderMenu);
+document.getElementById('viewCartBtn').addEventListener('click',openCart);
+document.getElementById('checkoutBtn').addEventListener('click',openCheckout);
+
+renderCategories();
+renderMenu();
+</script>
+
+</body>
+</html>
